@@ -117,6 +117,15 @@ def merge_dicts_list(dict_list):
 
 # process groundTrue.table
 def process_csv(file_path):
+    """
+
+    Args:
+        file_path ():
+
+    Returns:
+        是一个字典，key为quary column  value 为 join 的lake table columns list
+
+    """
     result = {}
     with open(file_path, 'r',encoding='utf-8') as csvfile:
         reader = csv.reader(csvfile)
@@ -129,3 +138,5 @@ def process_csv(file_path):
                 result[key] = {value}
     return result
 
+st = "t_1934eacab8c57857____c18_1____4.csv#Division name"
+print(st.split("#")[1])

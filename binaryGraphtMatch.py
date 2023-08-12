@@ -46,7 +46,7 @@ class BinaryGraphMatch:
             for rightnode in rightNodes:
                 if rightnode in self.columnsPPRdict[leftnode]:
                     G.add_edge(leftnode, rightnode, weight=self.columnsPPRdict[leftnode][rightnode])
-        return
+
         # 使用最大权匹配算法
         matching = nx.max_weight_matching(G, weight='weight', maxcardinality=True)
         max_weight = 0

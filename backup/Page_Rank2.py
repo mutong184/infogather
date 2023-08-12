@@ -11,6 +11,7 @@ class IncrementalPersonalizedPageRank2(object):
 
 
     def __init__(self, graph, node, number_of_random_walks, reset_probability):
+
         self.graph = graph
         self.node = node
         self.number_of_random_walks = number_of_random_walks

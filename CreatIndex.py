@@ -15,12 +15,15 @@ class CreatDataIndex:
         self.KIV = collections.defaultdict(set)
         # doc - document_attribute_name {doc:doc_attribute_name}
         self.docNo = collections.defaultdict(str)
+        # docname- docColumn list
+        self.docColumns = collections.defaultdict(set)
         # {term:[doc.....]}
         self.inversed_index = collections.defaultdict(set)
         # datafile
         self.path = datefile
         # counter
         self.doc_number = 0
+
 
     def computeIndex(self):
         for filename in os.listdir(self.path):
@@ -39,6 +42,10 @@ class CreatDataIndex:
                             continue
                         docName = f"{filename}#{header}".replace("\n", "")
                         self.docNo[self.doc_number] = docName
+
+                        # add this column to index
+                        self.docColumns[filename].add(self.doc_number)
+
                         doc = self.doc_number
 
                         # create KIA index
