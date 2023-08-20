@@ -3,6 +3,8 @@ import logging
 
 class MyLogger:
     def __init__(self, log_file):
+
+
         # 创建日志记录器
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.INFO)
@@ -24,14 +26,28 @@ class MyLogger:
         self.logger.addHandler(file_handler)
         self.logger.addHandler(console_handler)
 
+        # 重定向print函数
+        sys.stdout = self.LoggerStream(self.logger)
+        #sys.stderr = self.LoggerStream(self.logger)
+
+    class LoggerStream:
+        def __init__(self, logger):
+            self.logger = logger
+
+        def write(self, message):
+            self.logger.info(message)
+
+        def flush(self):
+            pass
+
     def info(self, message):
         self.logger.info(message)
-        print(message)  # 在控制台上显示信息
+        print(message)  # 在控制台上显示信息，同时也会存储到日志文件中
 
     def warning(self, message):
         self.logger.warning(message)
-        print(message)  # 在控制台上显示信息
+        print(message)  # 在控制台上显示信息，同时也会存储到日志文件中
 
     def error(self, message):
         self.logger.error(message)
-        print(message)  # 在控制台上显示信息
+        print(message)  # 在控制台上显示信息，同时也会存储到日志文件中

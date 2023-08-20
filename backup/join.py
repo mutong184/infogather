@@ -1,28 +1,47 @@
 import os
 import pickle
+import sys
 import time
-import networkx as nx
-import numpy as np
-
 import CreatIndex
-import util
 from myLogger import MyLogger
-from page_ranks import IncrementalPersonalizedPageRank3
-from quaryOnline import QuaryOnline
 
-logger = MyLogger('D:\ljj\log\main.log')
+# 获取当前文件的目录路径
+current_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
+# 拼接相对路径和日志文件名
+log_file_path = os.path.join(current_dir, "main.log")
+logger = MyLogger(log_file_path)
 
 
-def query_table_colums(querytable,querycolumn,index,ppr_vector,k):
+
+if __name__ == '__main__':
+    filepath = "/data_ssd/opendata"
+    #filepath = "D:\dataset\csv_benchmark"
+    start_time = time.time()
+    index = CreatIndex.CreatDataIndex(filepath)
+    index.computeIndex()
+    print("index length :%s" % index.doc_number)
+    end_time = time.time()
+    print("Index creation time: %s" % (end_time - start_time))
+    with open("/home/lijiajun/data/my_index.pkl", "wb") as file:
+        pickle.dump(index, file)
+    """ 
+    with open("D:\ljj\data\my_index.pkl", 'rb') as f:
+        similiar_matrix = pickle.load(f)
+    """
+
+
+
+def query_table_colums(querytable, querycolumn, index, ppr_vector, k):
     filepath = "D:\dataset\csv_benchmark"
-    queryfile = os.path.join(filepath,querytable)
+    queryfile = os.path.join(filepath, querytable)
     q = QuaryOnline(queryfile, querycolumn, index, ppr_vector)
     q.getRelationtablesSore()
     result = q.getTransformatTableInfo(index.docNo)
     return result[querycolumn][:k]
 
-def pprMtrix(graph,num_walks,reset_pro,docnum):
-    pprmatrixfile  = "D:\ljj\data\pprmatrix_n%s_r%s.pickle" % (num_walks, reset_pro)
+
+def pprMtrix(graph, num_walks, reset_pro, docnum):
+    pprmatrixfile = "D:\ljj\data\pprmatrix_n%s_r%s.pickle" % (num_walks, reset_pro)
     if os.path.exists(pprmatrixfile):
         with open(pprmatrixfile, 'rb') as file:
             ppr_vector = pickle.load(file)
@@ -43,11 +62,12 @@ def pprMtrix(graph,num_walks,reset_pro,docnum):
         ppr_vector = pickle.load(file)
     return ppr_vector
 
-def indicator(ki,index,ppr_vector):
+
+def indicator(ki, index, ppr_vector):
     groundtrue = "D:\dataset\indicate\csv_groundtruth\\att_groundtruth.csv"
     groundtruedict = util.process_csv(groundtrue)
-    precison = [0.0]*ki
-    recall = [0.0]*ki
+    precison = [0.0] * ki
+    recall = [0.0] * ki
     k = ki
     i = 0
     timec = 0
@@ -68,67 +88,52 @@ def indicator(ki,index,ppr_vector):
         i += 1
         tmp_pre = []
         tmp_recall = []
-        for cycle in range(1,k+1):
+        for cycle in range(1, k + 1):
             intersection = set(setresult[:cycle]) & value
             if intersection:
                 l = len(intersection)
                 tmp_pre.append(l / cycle)
                 tmp_recall.append(l / len(value))
-            #print("tablename:%s,precicion:%s ,recall:%s" % (key, l / k, l / len(value)))
+            # print("tablename:%s,precicion:%s ,recall:%s" % (key, l / k, l / len(value)))
             else:
                 tmp_pre.append(0.0)
                 tmp_recall.append(0.0)
                 print(" zero tablename:%s" % (key))
-        precison = [a+b for a,b in zip(tmp_pre,precison)]
-        recall = [a+b for a,b in zip(tmp_recall,recall)]
-    print("i:%s"%i)
-    print("30k precicion:%s ,recall:%s,querytime:%s" % (sum(precison[:30]) / 30 / i, sum(recall[:30]) / 30 /i, timec / i))
-    print("60k precicion:%s ,recall:%s,querytime:%s" % (sum(precison[:60]) / 60/i, sum(recall[:60]) / 60/i, timec / i))
-    print("%s precicion:%s ,recall:%s,querytime:%s" % (k, sum(precison) / k/i, sum(recall) / k/i, timec / i))
+        precison = [a + b for a, b in zip(tmp_pre, precison)]
+        recall = [a + b for a, b in zip(tmp_recall, recall)]
+    print("i:%s" % i)
+    print("30k precicion:%s ,recall:%s,querytime:%s" % (
+    sum(precison[:30]) / 30 / i, sum(recall[:30]) / 30 / i, timec / i))
+    print("60k precicion:%s ,recall:%s,querytime:%s" % (
+    sum(precison[:60]) / 60 / i, sum(recall[:60]) / 60 / i, timec / i))
+    print("%s precicion:%s ,recall:%s,querytime:%s" % (k, sum(precison) / k / i, sum(recall) / k / i, timec / i))
+
+
+def index_judger(file,index1,index2):
+    result1 = set()
+    result2 = set()
+    colums = index1.docColumns[file]
+    for colum in colums:
+        result1.add(index1.docNo[colum])
+    colums2 = index2.docColumns[file]
+    for colum in colums2:
+        result2.add(index2.docNo[colum])
+    if result1 != result2:
+        print("%s index error index 1 result:%s index2 result:%s " %(file,result1,result2))
+        return 1
+    else:
+        return 0
 
 
 
 
-if __name__ == '__main__':
-
-    # Create index
-
-    filepath = "D:\dataset\csv_benchmark"
-    #filepath = "D:\data_ljj"
-    start_time = time.time()
-    index = CreatIndex.CreatDataIndex(filepath)
-    index.computeIndex()
-    print("index length :%s"%index.doc_number)
-    end_time = time.time()
-    print("Index creation time: %s" % (end_time - start_time))
 
 
-    # Compute similar matrix
-    """
-    similiar = MachineLearnSample(index)
-    similiar.getlabled()
-    """
-    # Load graph
-    graph = nx.Graph()
-    start_time = time.time()
-    with open("D:\ljj\data\similiarmatrix.pickle", 'rb') as f:
-        similiar_matrix = pickle.load(f)
 
 
-    graph.add_nodes_from([i for i in range(index.doc_number)])
-    for tup in similiar_matrix:
-        # Get edges
-        edg1, edg2, edg3 = tup
-        graph.add_edge(edg1, edg2)
-    end_time = time.time()
-    print("Graph construction successful: %s" % (end_time - start_time))
 
-    # Compute PPR
-    ppr_vector = pprMtrix(graph,300,0.3,index.doc_number)
- 
-    ## queryonline
-    # scan groundtruth  get indicate
-    indicator(150, index, ppr_vector)
+
+
 
 
 

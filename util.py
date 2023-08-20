@@ -138,5 +138,15 @@ def process_csv(file_path):
                 result[key] = {value}
     return result
 
-st = "t_1934eacab8c57857____c18_1____4.csv#Division name"
-print(st.split("#")[1])
+import os
+
+def scan_directory(path):
+    with os.scandir(path) as entries:
+        for entry in entries:
+            if entry.is_file() and entry.name.endswith(".csv"):
+                print("File Name:", entry.name)
+                print("File Path:", entry.path)
+                print("----------------------")
+            elif entry.is_dir():
+                scan_directory(entry.path)
+

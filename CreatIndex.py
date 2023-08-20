@@ -1,14 +1,22 @@
+import pickle
+import sys
+import pandas as pd
 import collections
-import csv
 import os
-import re
-import logging
+import util
+from myLogger import MyLogger
+# 获取当前文件的目录路径
+current_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
 
-from util import calculate_unionsection
+log_dir = os.path.join(current_dir, "log")
 
+os.makedirs(log_dir, exist_ok=True)
+# 拼接相对路径和日志文件名
+log_file_path = os.path.join(log_dir, "creatindex.log")
+logger = MyLogger(log_file_path)
 
 class CreatDataIndex:
-    def __init__(self, datefile):
+    def __init__(self, datafile):
         # index KIA {attribute name: doc list}
         self.KIA = collections.defaultdict(set)
         # index of KIV {doc : terms list}
@@ -20,37 +28,34 @@ class CreatDataIndex:
         # {term:[doc.....]}
         self.inversed_index = collections.defaultdict(set)
         # datafile
-        self.path = datefile
+        self.datafile = datafile
         # counter
         self.doc_number = 0
 
-
     def computeIndex(self):
-        for filename in os.listdir(self.path):
-            try:
-                with open(os.path.join(self.path, filename), "r", encoding="utf-8") as csvfile:
-                    # read csv
-                    csvreader = csv.reader(csvfile)
-                    headers = next(csvreader)
-                    columns = {header: set() for header in headers}
-                    for row in csvreader:
-                        for i, value in enumerate(row):
-                            columns[headers[i]].add(value)
+        with os.scandir(self.datafile) as filenames:
+            for filename in filenames:
+                if filename.is_file() and filename.name.endswith(".csv"):
+                    try:
+                        df = pd.read_csv(filename.path)
+                    except Exception as e:
+                        print("%s occur Error :%s"%(filename.name,e))
+                        continue
+                    headers = df.columns.tolist()
+                    columns = {header: set(df[header].unique()) for header in headers}
 
                     for header, data in columns.items():
+                        header = header.strip()
                         if not header:
                             continue
-                        docName = f"{filename}#{header}".replace("\n", "")
+                        docName = f"{filename.name}#{header}".replace("\n", "")
                         self.docNo[self.doc_number] = docName
-
-                        # add this column to index
-                        self.docColumns[filename].add(self.doc_number)
+                        self.docColumns[filename.name].add(self.doc_number)
 
                         doc = self.doc_number
 
                         # create KIA index
-                        header_tmp = ""
-                        header_tmp = self.convertAttribute(header)
+                        header_tmp = util.convertArrtibute(header)
                         if header_tmp:
                             self.KIA[header_tmp].add(doc)
                         else:
@@ -64,26 +69,40 @@ class CreatDataIndex:
                         # create KIV index
                         self.KIV[self.doc_number] = terms
 
-                        # counter add
-                        self.doc_number = self.doc_number + 1
-            except UnicodeDecodeError as e:
-                print(f"Failed to read file {filename}: {e}")
+                        self.doc_number += 1
+                elif filename.is_dir():
+                    self.datafile = filename.path
+                    self.computeIndex()
+    def storeIndex(self,storepath):
+        KIAfile = os.path.join(storepath, "KIA.pkl")
+        with open(KIAfile, "wb") as file:
+            pickle.dump(self.KIA, file)
 
-    def getKIV(self, terms_set):
-        list_set = []
-        union = {}
-        for term in terms_set:
-            docs_set = self.inversed_index[term]
-            list_set.append(docs_set)
-        if list_set:
-            union = calculate_unionsection(list_set)
-        return union
+        KIVfile = os.path.join(storepath, "KIV.pkl")
+        with open(KIVfile, "wb") as file:
+            pickle.dump(self.KIV, file)
 
-    # convert attribute
-    def convertAttribute(self, name):
-        name = name.lower().replace("\n", "")
-        # appear \ ()  means multi-attribute name, get the first
-        name = re.sub(r'\(.*?\)', "", name)
-        name = re.sub(r"\\.*", "", name)
-        name = re.sub(r"\s+", "", name)
-        return name
+        docNofile = os.path.join(storepath, "docNo.pkl")
+        with open(docNofile, "wb") as file:
+            pickle.dump(self.docNo, file)
+
+        inversed_indexfile = os.path.join(storepath, "inversed_index.pkl")
+        with open(inversed_indexfile, "wb") as file:
+            pickle.dump(self.inversed_index, file)
+
+        docColumnsfile = os.path.join(storepath, "docColumns .pkl")
+        with open(docColumnsfile, "wb") as file:
+            pickle.dump(self.docColumns, file)
+
+        print("all index store success")
+
+
+
+
+
+
+
+
+
+
+
